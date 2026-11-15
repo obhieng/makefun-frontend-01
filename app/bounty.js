@@ -35,7 +35,7 @@ function renderBounty(container, bounty, slug, context) {
   const status = element('div', 'status-line'); append(status, statusBadge(bounty.deadline), element('span', 'muted', 'Live public competition data'));
   const summary = element('section', 'content-section');
   append(summary, element('h2', '', 'Overview'), element('p', 'lead-copy', bounty.summary || 'No summary provided.'));
-  if (bounty.description) summary.append(element('p', 'description', bounty.description));
+  if (bounty.description) summary.append(renderDescription(bounty.description));
   const grid = element('div', 'detail-grid');
   const rewards = element('section', 'content-section');
   rewards.append(element('h2', '', 'Rewards'));
@@ -52,6 +52,62 @@ function renderBounty(container, bounty, slug, context) {
   const actions = element('div', 'page-actions');
   append(actions, link(`#/bounty/${encodeURIComponent(slug)}/leaderboard`, 'View leaderboard', 'primary-link'), link('#/', '← All competitions', 'text-link'));
   append(container, metrics, status, summary, grid, rules, actions);
+}
+
+function renderDescription(markdown) {
+  const content = element('div', 'description');
+  let paragraph = [];
+  let list = null;
+  const flushParagraph = () => {
+    if (!paragraph.length) return;
+    const block = element('p');
+    appendInlineText(block, paragraph.join(' '));
+    content.append(block);
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (list) content.append(list);
+    list = null;
+  };
+  for (const rawLine of String(markdown).split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) { flushParagraph(); flushList(); continue; }
+    const heading = /^(#{1,3})\s+(.+)$/.exec(line);
+    if (heading) {
+      flushParagraph(); flushList();
+      const node = element(`h${heading[1].length}`);
+      appendInlineText(node, heading[2]);
+      content.append(node);
+      continue;
+    }
+    const item = /^[-*]\s+(.+)$/.exec(line);
+    if (item) {
+      flushParagraph();
+      if (!list) list = element('ul');
+      const node = element('li');
+      appendInlineText(node, item[1]);
+      list.append(node);
+      continue;
+    }
+    flushList();
+    paragraph.push(line);
+  }
+  flushParagraph(); flushList();
+  return content;
+}
+
+function appendInlineText(parent, text) {
+  const runs = String(text).split(/(`[^`]*`|\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g);
+  for (const run of runs) {
+    if (!run) continue;
+    const strong = /^\*\*(.+)\*\*$/.exec(run);
+    const emphasis = /^(?:\*(.+)\*|_(.+)_)$/.exec(run);
+    const code = /^`([^`]*)`$/.exec(run);
+    if (strong) parent.append(element('strong', '', strong[1]));
+    else if (emphasis) parent.append(element('em', '', emphasis[1] || emphasis[2]));
+    else if (code) parent.append(element('code', '', code[1]));
+    else parent.append(document.createTextNode(run));
+  }
 }
 
 function renderRewards(rewardsMap, potUsd) {

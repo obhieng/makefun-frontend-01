@@ -47,7 +47,7 @@ function renderLeaderboard(container, result, slug, context) {
   const header = element('thead'); const row = element('tr');
   const metricColumns = requestedMetricColumns(columns);
   const scoreColumns = extraScoreColumns(columns);
-  const headers = ['Rank', 'Entrant', ...metricColumns, ...scoreColumns.map(column => column.title || column.key || 'Score'), 'Valid', 'Dossier bytes'];
+  const headers = ['Rank', 'Entrant', ...metricColumns, ...scoreColumns.map(column => column.title || column.key || 'Score').filter(title => !/^(valid|bytes|dossier bytes|size)$/i.test(title)), 'Valid', 'Dossier bytes'];
   for (const title of headers) row.append(element('th', '', title));
   header.append(row); table.append(header);
   const body = element('tbody'); table.append(body); tableWrap.append(table); container.append(tableWrap);
@@ -93,14 +93,18 @@ function renderLeaderboardRows(entry, index, columns, metricTitles, scoreColumns
     const column = columns.find(item => (item.title || item.key) === title) || null;
     const value = valueForColumn(entry, column);
     const displayed = value ?? aliasMetric(entry, title);
-    row.append(element('td', '', title === 'Judge win rate' && displayed != null ? formatPercent(displayed) : displayed == null ? '—' : String(displayed)));
+    const scalar = displayed && typeof displayed === 'object'
+      ? (title === 'Judge win rate' ? displayed.value ?? displayed.rate ?? displayed.display : displayed.value ?? displayed.display)
+      : displayed;
+    row.append(element('td', '', title === 'Judge win rate' && scalar != null ? formatPercent(scalar) : scalar == null ? '—' : String(scalar)));
   }
   for (const column of scoreColumns) {
     const score = valueForColumn(entry, column);
-    row.append(element('td', '', score == null ? '—' : String(score)));
+    row.append(element('td', '', score == null || typeof score === 'object' ? '—' : String(score)));
   }
-  row.append(element('td', '', entry.valid ?? entry.compliant ?? '—'));
-  const size = entry.dossier_bytes ?? entry.dossier_size_bytes ?? entry.size_bytes ?? entry.size ?? entry.bytes;
+  const valid = entry.values?.valid ?? entry.valid ?? entry.compliant;
+  row.append(element('td', '', valid == null ? '—' : valid ? 'Yes' : 'No'));
+  const size = entry.values?.bytes ?? entry.dossier_bytes ?? entry.dossier_size_bytes ?? entry.size_bytes ?? entry.size ?? entry.bytes;
   row.append(element('td', 'number-cell', size == null ? '—' : formatNumber(size)));
   return row;
 }
