@@ -1,14 +1,21 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>make.fun bounties</title>
-<link rel="stylesheet" href="style.css">
-<script type="module" src="main.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f4">
+  <meta name="description" content="A live board for make.fun public competitions, leaderboards, and maker profiles.">
+  <title>make.fun | Competition board</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./main.js"></script>
 </head>
 <body>
-<header><a href="#/">make.fun bounties</a></header>
-<main id="app"></main>
+  <header class="topbar">
+    <a class="brand" href="#/" aria-label="make.fun competition board"><span class="brand-mark">m.</span><span>make.fun</span></a>
+    <nav aria-label="Primary"><a class="nav-current" href="#/">Competitions</a><a href="#/u/noble-harbor-30">Profile</a></nav>
+    <span class="read-only">PUBLIC DATA</span>
+  </header>
+  <main id="app" tabindex="-1" aria-live="polite"></main>
+  <footer class="site-foot"><span>Public competition data</span><span>make.fun</span></footer>
 </body>
 </html>
