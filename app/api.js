@@ -10,7 +10,13 @@ async function fetchCached(url, { refresh = false } = {}) {
   const request = (async () => {
     const headers = {};
     if (prior?.etag) headers['If-None-Match'] = prior.etag;
-    const response = await fetch(url, { method: 'GET', headers });
+    let response;
+    try {
+      response = await fetch(url, { method: 'GET', headers });
+    } catch (error) {
+      if (!prior?.etag) throw error;
+      response = await fetch(url, { method: 'GET', cache: 'no-cache' });
+    }
     if (response.status === 304 && prior) {
       prior.minute = minuteStamp();
       return prior.body;

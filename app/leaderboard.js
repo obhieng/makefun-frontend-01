@@ -47,7 +47,8 @@ function renderLeaderboard(container, result, slug, context) {
   const header = element('thead'); const row = element('tr');
   const metricColumns = requestedMetricColumns(columns);
   const scoreColumns = extraScoreColumns(columns);
-  const headers = ['Rank', 'Entrant', ...metricColumns, ...scoreColumns.map(column => column.title || column.key || 'Score').filter(title => !/^(valid|bytes|dossier bytes|size)$/i.test(title)), 'Valid', 'Dossier bytes'];
+  const visibleScoreColumns = scoreColumns.filter(column => !/^(valid|bytes|dossier bytes|size)$/i.test(column.title || column.key || ''));
+  const headers = ['Rank', 'Entrant', ...metricColumns, ...visibleScoreColumns.map(column => column.title || column.key || 'Score'), 'Valid', 'Dossier bytes'];
   for (const title of headers) row.append(element('th', '', title));
   header.append(row); table.append(header);
   const body = element('tbody'); table.append(body); tableWrap.append(table); container.append(tableWrap);
@@ -55,7 +56,7 @@ function renderLeaderboard(container, result, slug, context) {
   const pager = element('div', 'pagination'); container.append(pager);
   const count = element('p', 'results-count', `${formatNumber(entries.length)} entries · maximum ${pageSize} shown at a time`); container.append(count);
   function renderPage() {
-    body.replaceChildren(...entries.slice(page * pageSize, (page + 1) * pageSize).map((entry, index) => renderLeaderboardRows(entry, page * pageSize + index, columns, metricColumns, scoreColumns)));
+    body.replaceChildren(...entries.slice(page * pageSize, (page + 1) * pageSize).map((entry, index) => renderLeaderboardRows(entry, page * pageSize + index, columns, metricColumns, visibleScoreColumns)));
     const previous = element('button', 'quiet-button', 'Previous'); previous.disabled = page === 0; previous.addEventListener('click', () => { page--; renderPage(); });
     const next = element('button', 'quiet-button', 'Next'); next.disabled = (page + 1) * pageSize >= entries.length; next.addEventListener('click', () => { page++; renderPage(); });
     pager.replaceChildren(previous, element('span', 'page-count', `Page ${page + 1} of ${Math.ceil(entries.length / pageSize)}`), next);
@@ -91,12 +92,16 @@ function renderLeaderboardRows(entry, index, columns, metricTitles, scoreColumns
   row.append(entrant);
   for (const title of metricTitles) {
     const column = columns.find(item => (item.title || item.key) === title) || null;
-    const value = valueForColumn(entry, column);
+    const metricKey = column && ['judge', 'judge_low', 'judge_high'].includes(column.key) ? column.key : null;
+    const microValue = metricKey ? entry.values?.[metricKey] : null;
+    const hasMicroValue = Number.isFinite(microValue);
+    const value = hasMicroValue ? microValue / 1e6 : valueForColumn(entry, column);
     const displayed = value ?? aliasMetric(entry, title);
     const scalar = displayed && typeof displayed === 'object'
       ? (title === 'Judge win rate' ? displayed.value ?? displayed.rate ?? displayed.display : displayed.value ?? displayed.display)
       : displayed;
-    row.append(element('td', '', title === 'Judge win rate' && scalar != null ? formatPercent(scalar) : scalar == null ? '—' : String(scalar)));
+    const isPercent = hasMicroValue || title === 'Judge win rate';
+    row.append(element('td', '', scalar == null ? '—' : isPercent ? formatPercent(scalar) : String(scalar)));
   }
   for (const column of scoreColumns) {
     const score = valueForColumn(entry, column);
